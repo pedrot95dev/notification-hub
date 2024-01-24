@@ -27,6 +27,7 @@ app.UseFastEndpoints(c =>
 {
 	c.Endpoints.Configurator = ep =>
 	{
+		ep.PreProcessor<DomainVerifierPreProcessor>(Order.Before);
 		ep.PreProcessor<ApiIdHeaderPreProcessor>(Order.Before);
 	};
 });
