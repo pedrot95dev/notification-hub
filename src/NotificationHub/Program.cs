@@ -1,5 +1,6 @@
 using FastEndpoints;
 using FastEndpoints.Swagger;
+using NotificationHub.Pipeline;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,7 +23,13 @@ app.UseCors(builder =>
 		.WithHeaders("x-app-id");
 });
 
-app.UseFastEndpoints();
+app.UseFastEndpoints(c =>
+{
+	c.Endpoints.Configurator = ep =>
+	{
+		ep.PreProcessor<ApiIdHeaderPreProcessor>(Order.Before);
+	};
+});
 
 if (app.Environment.IsDevelopment())
 {
