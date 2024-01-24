@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationHub", "src\NotificationHub\NotificationHub.csproj", "{45CD1575-ADDE-4896-AECA-2FA2706E97FD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "solution_items", "solution_items", "{57A02B0D-90DA-4BF8-AEC1-04EC88EFEAB2}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+		LICENSE = LICENSE
+		.dockerignore = .dockerignore
+		.gitignore = .gitignore
+		Dockerfile = Dockerfile
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{857C030A-351D-4485-96CA-F0779E3BCE84}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{45CD1575-ADDE-4896-AECA-2FA2706E97FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45CD1575-ADDE-4896-AECA-2FA2706E97FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45CD1575-ADDE-4896-AECA-2FA2706E97FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45CD1575-ADDE-4896-AECA-2FA2706E97FD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{45CD1575-ADDE-4896-AECA-2FA2706E97FD} = {857C030A-351D-4485-96CA-F0779E3BCE84}
+	EndGlobalSection
+EndGlobal
