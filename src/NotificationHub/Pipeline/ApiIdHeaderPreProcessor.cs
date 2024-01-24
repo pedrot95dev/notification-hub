@@ -1,6 +1,4 @@
 ﻿using FastEndpoints;
-using FluentValidation.Results;
-using Microsoft.Extensions.Options;
 using NotificationHub.Configuration;
 
 namespace NotificationHub.Pipeline;
@@ -8,8 +6,8 @@ namespace NotificationHub.Pipeline;
 public class ApiIdHeaderPreProcessor : IGlobalPreProcessor
 {
 	public const string AppIdHeader = "x-app-id";
-	
-	public readonly IEnumerable<Application> _allowedApplications;
+
+	private readonly IEnumerable<Application> _allowedApplications;
 
 	public ApiIdHeaderPreProcessor(IConfiguration configuration)
 	{
@@ -18,14 +16,13 @@ public class ApiIdHeaderPreProcessor : IGlobalPreProcessor
 	
 	public Task PreProcessAsync(IPreProcessorContext ctx, CancellationToken ct)
 	{
-		if (!ctx.HttpContext.Request.Headers.TryGetValue(AppIdHeader, out var appId))
+		if (ctx.HttpContext.ResponseStarted())
 		{
-			ctx.ValidationFailures.Add(new ValidationFailure("MissingHeaders", $"The {AppIdHeader} header needs to be set!"));
-
-			return ctx.HttpContext.Response.SendErrorsAsync(ctx.ValidationFailures, cancellation: ct);
+			return Task.CompletedTask;
 		}
-
-		if (_allowedApplications.All(x => x.Id != appId))
+		
+		if (!ctx.HttpContext.Request.Headers.TryGetValue(AppIdHeader, out var appId)
+			|| _allowedApplications.All(x => x.Id != appId))
 		{
 			return ctx.HttpContext.Response.SendUnauthorizedAsync(cancellation: ct);
 		}
