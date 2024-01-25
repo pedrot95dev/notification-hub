@@ -11,7 +11,7 @@ public class ApiIdHeaderPreProcessor : IGlobalPreProcessor
 
 	public ApiIdHeaderPreProcessor(IConfiguration configuration)
 	{
-		_allowedApplications = configuration.GetSection("Applications").Get<ApplicationsConfiguration>()?.Applications!;
+		_allowedApplications = configuration.Get<ApplicationsConfiguration>()?.Applications!;
 	}
 	
 	public Task PreProcessAsync(IPreProcessorContext ctx, CancellationToken ct)
