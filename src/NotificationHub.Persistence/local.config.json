@@ -1,0 +1,5 @@
+{
+  "ConnectionStrings": {
+    "ApplicationDbConnection": "Server=localhost;Port=5432;DataBase=notification-hub;Uid=postgres;Pwd=postgres;"
+  }
+}

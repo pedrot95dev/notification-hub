@@ -1,5 +1,7 @@
 using FastEndpoints;
 using FastEndpoints.Swagger;
+using Microsoft.EntityFrameworkCore;
+using NotificationHub.Persistence;
 using NotificationHub.Pipeline;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,5 +38,8 @@ if (app.Environment.IsDevelopment())
 {
 	app.UseSwaggerGen();
 }
+
+var dbContext = app.Services.GetRequiredService<ApplicationDbContext>();
+await dbContext.Database.MigrateAsync();
 
 app.Run();
