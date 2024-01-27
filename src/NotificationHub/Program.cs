@@ -47,7 +47,7 @@ if (app.Environment.IsDevelopment())
 	app.UseSwaggerGen();
 }
 
-var dbContext = app.Services.GetRequiredService<ApplicationDbContext>();
-await dbContext.Database.MigrateAsync();
+var dbFeeder = app.Services.GetRequiredService<ApplicationDbFeeder>();
+await dbFeeder.MigrateAsync();
 
 app.Run();
