@@ -29,7 +29,7 @@ app.UseCors(builder =>
 	builder
 		.WithOrigins(origins)
 		.WithMethods("POST")
-		.WithHeaders("x-app-id");
+		.WithHeaders(ApiIdHeaderPreProcessor.AppIdHeader);
 });
 
 app.UseFastEndpoints(c =>
