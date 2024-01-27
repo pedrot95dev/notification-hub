@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NotificationHub.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240126012357_Initial")]
+    [Migration("20240127020158_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -35,6 +35,14 @@ namespace NotificationHub.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmailDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExternalId")
                         .IsRequired()
                         .HasColumnType("text");
 

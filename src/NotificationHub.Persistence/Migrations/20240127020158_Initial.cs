@@ -33,8 +33,10 @@ namespace NotificationHub.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ExternalId = table.Column<string>(type: "text", nullable: false),
                     SmtpConfigurationId = table.Column<Guid>(type: "uuid", nullable: false),
                     Domain = table.Column<string>(type: "text", nullable: false),
+                    EmailDestination = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
