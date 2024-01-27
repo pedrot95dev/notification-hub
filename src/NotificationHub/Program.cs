@@ -11,6 +11,8 @@ builder.Services
 	.SwaggerDocument()
 	.AddCors();
 
+builder.Services.AddPersistence();
+
 var app = builder.Build();
 
 app.UseHttpsRedirection();
