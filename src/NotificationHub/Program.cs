@@ -11,6 +11,8 @@ builder.Services
 	.SwaggerDocument()
 	.AddCors();
 
+builder.Services.AddScoped<ICurrentApplication, CurrentApplication>();
+
 builder.Services.AddPersistence();
 
 var app = builder.Build();
