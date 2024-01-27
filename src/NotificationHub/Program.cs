@@ -3,6 +3,8 @@ using FastEndpoints.Swagger;
 using Microsoft.EntityFrameworkCore;
 using NotificationHub.Persistence;
 using NotificationHub.Pipeline;
+using NotificationHub.Services.CurrentApplication;
+using NotificationHub.Services.EmailService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +14,7 @@ builder.Services
 	.AddCors();
 
 builder.Services.AddScoped<ICurrentApplication, CurrentApplication>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddPersistence();
 
