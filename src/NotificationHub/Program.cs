@@ -1,6 +1,5 @@
 using FastEndpoints;
 using FastEndpoints.Swagger;
-using Microsoft.EntityFrameworkCore;
 using NotificationHub.Persistence;
 using NotificationHub.Pipeline;
 using NotificationHub.Services.CurrentApplication;
