@@ -29,6 +29,8 @@ public class Application
 	
 	public string Domain { get; set; }
 
+	public string EmailDestination { get; set; }
+
 	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 	
 	public ICollection<EmailSent>? EmailSents { get; set; }
@@ -44,6 +46,8 @@ public class ApplicationConfiguration : IEntityTypeConfiguration<Application>
 		builder.Property(x => x.ExternalId)
 			.IsRequired();
 		builder.Property(x => x.Domain)
+			.IsRequired();
+		builder.Property(x => x.EmailDestination)
 			.IsRequired();
 		builder.Property(x => x.CreatedAt)
 			.IsRequired();

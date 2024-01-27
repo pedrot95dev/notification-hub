@@ -46,17 +46,17 @@ public class SendEmailEndpoint : Endpoint<SendEmailRequest,
 
 	public override async Task HandleAsync(SendEmailRequest req, CancellationToken ct)
 	{
-		var smtpConfigurationResult = _currentApplication.SmtpConfiguration;
-
-		if (smtpConfigurationResult.IsT1)
+		var applicationResult = _currentApplication.Application;
+		if (applicationResult.IsT1)
 		{
 			await SendUnauthorizedAsync(ct);
 			return;
 		}
 		
-		var smtpConfiguration = smtpConfigurationResult.AsT0;
+		var application = applicationResult.AsT0;
+		var smtpConfiguration = _currentApplication.SmtpConfiguration.AsT0;
 		
-		await _emailService.SendEmailAsync(req.Subject, req.Message, smtpConfiguration.UserName, smtpConfiguration.UserName, req.ReplayToEmail, smtpConfiguration, ct);
+		await _emailService.SendEmailAsync(req.Subject, req.Message, smtpConfiguration.UserName, application.EmailDestination, req.ReplayToEmail, smtpConfiguration, ct);
 		
 		await SendNoContentAsync(ct);
 	}
