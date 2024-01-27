@@ -39,7 +39,7 @@ public class SendEmailEndpoint : Endpoint<SendEmailRequest,
 	
 	public override void Configure()
 	{
-		Post("email/send");
+		Post("emails/send");
 		Summary(new SendEmailEndpointSummary());
 		AllowAnonymous();
 	}
