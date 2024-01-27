@@ -16,7 +16,8 @@ public class CurrentApplication : ICurrentApplication
 	
 	private SmtpConfiguration? _smtpConfiguration;
 	
-	public CurrentApplication(ApplicationDbContext dbContext,
+	public CurrentApplication(
+		ApplicationDbContext dbContext,
 		IHttpContextAccessor httpContextAccessor)
 	{
 		_dbContext = dbContext;
@@ -29,11 +30,11 @@ public class CurrentApplication : ICurrentApplication
 
 	private OneOf<Application, NotFound> GetCurrentApplication()
 	{
-		var appId = _httpContextAccessor.HttpContext!.Request.Headers[ApiIdHeaderPreProcessor.AppIdHeader];
+		var appId = _httpContextAccessor.HttpContext!.Request.Headers[ApiIdHeaderPreProcessor.AppIdHeader].ToString();
 		
 		_application ??= _dbContext.Applications
 			.AsNoTracking()
-			.FirstOrDefault(x => x.Id == appId);
+			.FirstOrDefault(x => x.ExternalId == appId);
 		
 		return _application is null 
 			? new NotFound() 
