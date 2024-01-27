@@ -11,7 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
 	.AddFastEndpoints()
 	.SwaggerDocument()
-	.AddCors();
+	.AddCors()
+	.AddMemoryCache();
 
 builder.Services.AddScoped<ICurrentApplication, CurrentApplication>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -36,7 +37,7 @@ app.UseFastEndpoints(c =>
 {
 	c.Endpoints.Configurator = ep =>
 	{
-		ep.PreProcessor<DomainVerifierPreProcessor>(Order.Before);
+		ep.PreProcessor<LimitIpAddressPreProcessor>(Order.Before);
 		ep.PreProcessor<ApiIdHeaderPreProcessor>(Order.Before);
 	};
 });

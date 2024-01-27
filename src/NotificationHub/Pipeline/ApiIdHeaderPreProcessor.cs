@@ -17,25 +17,25 @@ public class ApiIdHeaderPreProcessor : IGlobalPreProcessor
 		_currentApplication = currentApplication;
 	}
 	
-	public Task PreProcessAsync(IPreProcessorContext ctx, CancellationToken ct)
+	public async Task PreProcessAsync(IPreProcessorContext ctx, CancellationToken ct)
 	{
 		if (ctx.HttpContext.ResponseStarted())
 		{
-			return Task.CompletedTask;
+			return;
 		}
 		
 		if (!ctx.HttpContext.Request.Headers.TryGetValue(AppIdHeader, out var appId))
 		{
 			_logger.LogWarning("Unauthorized request from {RemoteIpAddress}: missing {AppHeader}", ctx.HttpContext.Connection.RemoteIpAddress, AppIdHeader);
-			return ctx.HttpContext.Response.SendUnauthorizedAsync(cancellation: ct);
+			await ctx.HttpContext.Response.SendUnauthorizedAsync(cancellation: ct);
+			return;
 		}
 
 		if (_currentApplication.Application.IsT1)
 		{
 			_logger.LogWarning("Unauthorized request from {RemoteIpAddress}: {ApplicationId} is not registered", ctx.HttpContext.Connection.RemoteIpAddress, appId);
-			return ctx.HttpContext.Response.SendUnauthorizedAsync(cancellation: ct);
+			await ctx.HttpContext.Response.SendUnauthorizedAsync(cancellation: ct);
+			return;
 		}
-
-		return Task.CompletedTask;
 	}
 }
