@@ -24,12 +24,11 @@ app.UseHttpsRedirection();
 
 app.UseCors(builder =>
 {
-	var origins = app.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>();
-	
+	// var origins = app.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>();
 	builder
-		.WithOrigins(origins)
-		.WithMethods("POST")
-		.WithHeaders(ApiIdHeaderPreProcessor.AppIdHeader);
+		.AllowAnyOrigin()
+		.AllowAnyHeader()
+		.AllowAnyMethod();
 });
 
 app.UseFastEndpoints(c =>
