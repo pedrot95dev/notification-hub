@@ -66,7 +66,7 @@ public class SendEmailEndpoint : Endpoint<SendEmailRequest,
 			.Where(x => x.ApplicationId == application.Id)
 			.CountAsync(ct);
 		
-		var subject = $"#{emailsSentCount}: {req.Subject}";
+		var subject = $"#{emailsSentCount + 1}: {req.Subject}";
 		
 		await _emailService.SendEmailAsync(subject, req.Message, smtpConfiguration.UserName, application.EmailDestination, req.ReplayToEmail, smtpConfiguration, ct);
 		
