@@ -29,7 +29,7 @@ public class SmtpConfiguration
 
 	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 	
-	public Application? Application { get; set; }
+	public IList<Application>? Applications { get; set; }
 }
 
 public class SmtpConfigurationConfiguration : IEntityTypeConfiguration<SmtpConfiguration>

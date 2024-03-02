@@ -52,8 +52,8 @@ public class ApplicationConfiguration : IEntityTypeConfiguration<Application>
 		builder.Property(x => x.CreatedAt)
 			.IsRequired();
 		builder.HasOne(x => x.SmtpConfiguration)
-			.WithOne(x => x.Application)
-			.HasForeignKey<Application>(x => x.SmtpConfigurationId)
+			.WithMany(x => x.Applications)
+			.HasForeignKey(x => x.SmtpConfigurationId)
 			.OnDelete(DeleteBehavior.NoAction)
 			.IsRequired();
 	}
