@@ -68,7 +68,7 @@ public class SendEmailEndpoint : Endpoint<SendEmailRequest,
 		
 		var subject = $"#{emailsSentCount + 1}: {req.Subject}";
 		
-		await _emailService.SendEmailAsync(subject, req.Message, smtpConfiguration.UserName, application.EmailDestination, req.ReplayToEmail, smtpConfiguration, ct);
+		await _emailService.SendEmailAsync(subject, req.Message, req.ReplayToEmail, application.EmailDestination, req.ReplayToEmail, smtpConfiguration, ct);
 		
 		await LogEmailSent(application.Id, req.ReplayToEmail, ct);
 
