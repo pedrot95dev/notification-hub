@@ -23,6 +23,7 @@ public class SendEmailEndpointSummary : EndpointSummary
 		Response(204, "Ok response with the content.");
 		Response<ErrorResponse>(400, "Validation request");
 		Response<ErrorResponse>(401, "Unauthorized request");
+		Response<ErrorResponse>(502, "Email could not be sent");
 	}
 }
 
@@ -68,7 +69,13 @@ public class SendEmailEndpoint : Endpoint<SendEmailRequest,
 		
 		var subject = $"#{emailsSentCount + 1}: {req.Subject}";
 		
-		await _emailService.SendEmailAsync(subject, req.Message, smtpConfiguration.UserName, application.EmailDestination, req.ReplayToEmail, smtpConfiguration, ct);
+		var sent = await _emailService.SendEmailAsync(subject, req.Message, smtpConfiguration.UserName, application.EmailDestination, req.ReplayToEmail, smtpConfiguration, ct);
+		if (!sent)
+		{
+			AddError("The email could not be sent. Please try again.");
+			await SendErrorsAsync(502, ct);
+			return;
+		}
 		
 		await LogEmailSent(application.Id, req.ReplayToEmail, ct);
 
