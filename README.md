@@ -12,6 +12,16 @@ ConnectionStrings__ApplicationDbConnection=Server=host;Port=5432;Database=notifi
 
 Design-time `dotnet ef` reads `src/NotificationHub.Persistence/local.config.json`, which is gitignored. Copy `local.config.example.json` to that path and put in a local password before adding a migration. The container runs as the image's `app` user and listens on an unprivileged port (publish `127.0.0.1:7999`).
 
+## Origin and CORS
+
+`Cors:Origins` is the browser allowlist. The committed default is `https://dconstructions.ch`, `https://www.dconstructions.ch`, `https://pedroteixeira.dev`, and `https://www.pedroteixeira.dev`. Override with `Cors__Origins__0` and so on.
+
+When a request sends `Origin`, its host is compared to `Applications.Domain` after dropping the scheme, a leading `www.`, a trailing slash, and case. A missing `Origin` is allowed, so the portfolio server route (no `Origin` header) keeps working. Check the stored domains before deploying:
+
+```sql
+SELECT "ExternalId", "Domain" FROM "Applications";
+```
+
 ## Docker publish binding
 
 Publish the container on the host loopback interface so only cloudflared (or another local process) can open a connection:

@@ -25,11 +25,10 @@ var app = builder.Build();
 
 app.UseHttpsRedirection();
 
-app.UseCors(builder =>
+app.UseCors(policy =>
 {
-	// var origins = app.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>();
-	builder
-		.AllowAnyOrigin()
+	policy
+		.WithOrigins(CorsOrigins(app.Configuration))
 		.AllowAnyHeader()
 		.AllowAnyMethod();
 });
@@ -40,6 +39,7 @@ app.UseFastEndpoints(c =>
 	{
 		ep.PreProcessor<LimitIpAddressPreProcessor>(Order.Before);
 		ep.PreProcessor<ApiIdHeaderPreProcessor>(Order.Before);
+		ep.PreProcessor<ApplicationOriginPreProcessor>(Order.Before);
 	};
 });
 
@@ -55,5 +55,22 @@ if (!app.Environment.IsEnvironment("Testing"))
 }
 
 app.Run();
+
+static string[] CorsOrigins(IConfiguration configuration)
+{
+	var configured = configuration.GetSection("Cors:Origins").Get<string[]>();
+	if (configured is { Length: > 0 })
+	{
+		return configured;
+	}
+
+	return
+	[
+		"https://dconstructions.ch",
+		"https://www.dconstructions.ch",
+		"https://pedroteixeira.dev",
+		"https://www.pedroteixeira.dev"
+	];
+}
 
 public partial class Program;
