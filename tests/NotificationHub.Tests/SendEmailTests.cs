@@ -111,6 +111,68 @@ public class SendEmailTests
 		Assert.Equal(HttpStatusCode.TooManyRequests, (await SendAsync(factory, appId: "one", clientIp: "not-an-ip", forwardedFor: "198.51.100.3")).StatusCode);
 	}
 
+	[Fact]
+	public async Task Missing_origin_is_allowed()
+	{
+		await using var factory = new NotificationHubApiFactory();
+		await factory.SeedApplicationAsync("dconstructions", domain: "dconstructions.ch");
+
+		var response = await SendAsync(factory, appId: "dconstructions");
+
+		Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+		Assert.Equal(1, factory.Email.CallCount);
+	}
+
+	[Theory]
+	[InlineData("https://dconstructions.ch")]
+	[InlineData("https://www.dconstructions.ch/")]
+	[InlineData("HTTPS://WWW.DCONSTRUCTIONS.CH")]
+	public async Task Origin_whose_host_matches_the_application_domain_is_allowed(string origin)
+	{
+		await using var factory = new NotificationHubApiFactory();
+		await factory.SeedApplicationAsync("dconstructions", domain: "https://www.dconstructions.ch/");
+
+		var response = await SendAsync(factory, appId: "dconstructions", origin: origin);
+
+		Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+		Assert.Equal(1, factory.Email.CallCount);
+	}
+
+	[Fact]
+	public async Task Origin_for_a_different_host_is_401_and_does_not_call_smtp()
+	{
+		await using var factory = new NotificationHubApiFactory();
+		await factory.SeedApplicationAsync("dconstructions", domain: "dconstructions.ch");
+
+		var response = await SendAsync(factory, appId: "dconstructions", origin: "https://evil.example");
+
+		Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+		Assert.Equal(0, factory.Email.CallCount);
+	}
+
+	[Fact]
+	public async Task Cors_allowlist_echoes_known_origins_only()
+	{
+		await using var factory = new NotificationHubApiFactory();
+		var client = factory.CreateClient();
+
+		var allowed = await PreflightAsync(client, "https://www.dconstructions.ch");
+		Assert.True(allowed.Headers.TryGetValues("Access-Control-Allow-Origin", out var allowedOrigin));
+		Assert.Equal("https://www.dconstructions.ch", allowedOrigin!.Single());
+
+		var blocked = await PreflightAsync(client, "https://evil.example");
+		Assert.False(blocked.Headers.Contains("Access-Control-Allow-Origin"));
+	}
+
+	private static async Task<HttpResponseMessage> PreflightAsync(HttpClient client, string origin)
+	{
+		var request = new HttpRequestMessage(HttpMethod.Options, "/emails/send");
+		request.Headers.TryAddWithoutValidation("Origin", origin);
+		request.Headers.TryAddWithoutValidation("Access-Control-Request-Method", "POST");
+		request.Headers.TryAddWithoutValidation("Access-Control-Request-Headers", "x-app-id,content-type");
+		return await client.SendAsync(request);
+	}
+
 	private static Dictionary<string, string?> TightLimit(string trustedProxy) => new()
 	{
 		["RateLimit:MaxRequests"] = "1",
@@ -125,7 +187,8 @@ public class SendEmailTests
 		string message = "A message body",
 		string replyTo = "person@example.com",
 		string? clientIp = null,
-		string? forwardedFor = null)
+		string? forwardedFor = null,
+		string? origin = null)
 	{
 		var client = factory.CreateClient();
 		var request = new HttpRequestMessage(HttpMethod.Post, "/emails/send")
@@ -145,6 +208,11 @@ public class SendEmailTests
 		if (forwardedFor is not null)
 		{
 			request.Headers.TryAddWithoutValidation("X-Forwarded-For", forwardedFor);
+		}
+
+		if (origin is not null)
+		{
+			request.Headers.TryAddWithoutValidation("Origin", origin);
 		}
 
 		return await client.SendAsync(request);
