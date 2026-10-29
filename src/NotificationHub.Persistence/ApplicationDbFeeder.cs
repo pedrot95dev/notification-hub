@@ -9,7 +9,7 @@ public class ApplicationDbFeeder
 	
 	public ApplicationDbFeeder(IConfiguration configuration)
 	{
-		_dbContext = new ApplicationDbContext(configuration);
+		_dbContext = new ApplicationDbContext(new DbContextOptions<ApplicationDbContext>(), configuration);
 	}
 	
 	public async Task MigrateAsync(CancellationToken ct = default)
