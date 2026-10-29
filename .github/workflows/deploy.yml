@@ -22,6 +22,14 @@ jobs:
         dotnet-version: 8.0.x
     - name: Restore dependencies
       run: dotnet restore
+    - name: Check for vulnerable packages
+      run: |
+        set -o pipefail
+        dotnet list package --vulnerable --include-transitive | tee vuln.txt
+        if grep -E "has the following vulnerable packages" vuln.txt; then
+          echo "Vulnerable packages found."
+          exit 1
+        fi
     - name: Build
       run: dotnet build --no-restore
 
