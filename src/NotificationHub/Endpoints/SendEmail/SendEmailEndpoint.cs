@@ -65,27 +65,28 @@ public class SendEmailEndpoint : Endpoint<SendEmailRequest,
 		var smtpConfiguration = _currentApplication.SmtpConfiguration.AsT0;
 		
 		var emailsSentCount = await _dbContext.EmailSents
-			.Where(x => x.ApplicationId == application.Id)
+			.Where(x => x.ApplicationId == application.Id && x.Status == EmailSentStatus.Sent)
 			.CountAsync(ct);
 		
 		var subject = $"#{emailsSentCount + 1}: {req.Subject}";
 		
 		var sent = await _emailService.SendEmailAsync(subject, req.Message, smtpConfiguration.UserName, application.EmailDestination, req.ReplayToEmail, smtpConfiguration, ct);
-		if (!sent)
+		if (!sent.Succeeded)
 		{
+			await LogEmailSent(application.Id, req.ReplayToEmail, EmailSentStatus.Failed, sent.Error, sentAt: null, ct);
 			AddError("The email could not be sent. Please try again.");
 			await SendErrorsAsync(502, ct);
 			return;
 		}
 		
-		await LogEmailSent(application.Id, req.ReplayToEmail, ct);
+		await LogEmailSent(application.Id, req.ReplayToEmail, EmailSentStatus.Sent, error: null, DateTime.UtcNow, ct);
 
 		await SendNoContentAsync(ct);
 	}
 
-	private async Task LogEmailSent(Guid applicationId, string email, CancellationToken ct)
+	private async Task LogEmailSent(Guid applicationId, string email, EmailSentStatus status, string? error, DateTime? sentAt, CancellationToken ct)
 	{
-		var emailSent = new EmailSent(applicationId, email);
+		var emailSent = new EmailSent(applicationId, email, status, error, sentAt);
 		await _dbContext.EmailSents.AddAsync(emailSent, ct);
 		await _dbContext.SaveChangesAsync(ct);
 	}
