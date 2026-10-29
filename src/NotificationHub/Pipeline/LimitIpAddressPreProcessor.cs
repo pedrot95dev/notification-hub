@@ -9,33 +9,11 @@ public class LimitIpAddressPreProcessor : IGlobalPreProcessor
 {
 	public const string ConnectingIpHeader = "CF-Connecting-IP";
 
-	private readonly ILogger<LimitIpAddressPreProcessor> _logger;
-	private readonly IMemoryCache _memoryCache;
-	private readonly RateLimitOptions _options;
-	private readonly HashSet<IPAddress> _trustedProxies;
-	private readonly object _gate = new();
-
-	public LimitIpAddressPreProcessor(
-		ILogger<LimitIpAddressPreProcessor> logger,
-		IMemoryCache memoryCache,
-		IOptions<RateLimitOptions> options)
-	{
-		_logger = logger;
-		_memoryCache = memoryCache;
-		_options = options.Value;
-		_trustedProxies = new HashSet<IPAddress>();
-		foreach (var raw in _options.TrustedProxies ?? [])
-		{
-			if (IPAddress.TryParse(raw, out var parsed))
-			{
-				_trustedProxies.Add(Normalize(parsed));
-			}
-			else
-			{
-				_logger.LogWarning("Ignoring RateLimit trusted proxy value {Proxy} because it is not an IP address", raw);
-			}
-		}
-	}
+	// FastEndpoints constructs global preprocessors once through a static ServiceResolver and
+	// reuses that instance across WebApplicationFactory hosts. Capturing IMemoryCache in the
+	// constructor ties the limiter to whichever host won the race; disposing that host throws
+	// ObjectDisposedException on the next request. Resolve per request instead.
+	private static readonly object Gate = new();
 
 	public async Task PreProcessAsync(IPreProcessorContext ctx, CancellationToken ct)
 	{
@@ -50,16 +28,21 @@ public class LimitIpAddressPreProcessor : IGlobalPreProcessor
 		}
 
 		var http = ctx.HttpContext;
+		var services = http.RequestServices;
+		var cache = services.GetRequiredService<IMemoryCache>();
+		var options = services.GetRequiredService<IOptions<RateLimitOptions>>().Value;
+		var logger = services.GetRequiredService<ILogger<LimitIpAddressPreProcessor>>();
+		var trustedProxies = ParseTrustedProxies(options.TrustedProxies, logger);
 		var peer = http.Connection.RemoteIpAddress;
-		var clientIp = ResolveClientIp(http, peer);
+		var clientIp = ResolveClientIp(http, peer, trustedProxies);
 		var appId = ReadAppId(http);
-		var maxRequests = ResolveMaxRequests(appId);
+		var maxRequests = ResolveMaxRequests(appId, options);
 		var key = $"{appId}|{clientIp}";
 
 		var limited = false;
-		lock (_gate)
+		lock (Gate)
 		{
-			limited = IsLimited(key, maxRequests);
+			limited = IsLimited(cache, key, maxRequests, options.WindowMinutes);
 		}
 
 		if (!limited)
@@ -67,7 +50,7 @@ public class LimitIpAddressPreProcessor : IGlobalPreProcessor
 			return;
 		}
 
-		_logger.LogWarning(
+		logger.LogWarning(
 			"Too many requests for app {AppId} from client {ClientIp} (peer {PeerIp})",
 			string.IsNullOrEmpty(appId) ? "(none)" : appId,
 			clientIp,
@@ -80,16 +63,16 @@ public class LimitIpAddressPreProcessor : IGlobalPreProcessor
 			ct);
 	}
 
-	private bool IsLimited(string key, int maxRequests)
+	private static bool IsLimited(IMemoryCache cache, string key, int maxRequests, int windowMinutes)
 	{
-		var window = TimeSpan.FromMinutes(_options.WindowMinutes <= 0 ? 30 : _options.WindowMinutes);
+		var window = TimeSpan.FromMinutes(windowMinutes <= 0 ? 30 : windowMinutes);
 
-		if (_memoryCache.TryGetValue(key, out RateLimitCounter? existing) && existing is not null)
+		if (cache.TryGetValue(key, out RateLimitCounter? existing) && existing is not null)
 		{
 			var remaining = existing.ExpiresAt - DateTimeOffset.UtcNow;
 			if (remaining <= TimeSpan.Zero)
 			{
-				_memoryCache.Set(key, RateLimitCounter.Start(window), window);
+				cache.Set(key, RateLimitCounter.Start(window), window);
 				return false;
 			}
 
@@ -99,30 +82,48 @@ public class LimitIpAddressPreProcessor : IGlobalPreProcessor
 			}
 
 			existing.Count++;
-			_memoryCache.Set(key, existing, remaining);
+			cache.Set(key, existing, remaining);
 			return false;
 		}
 
-		_memoryCache.Set(key, RateLimitCounter.Start(window), window);
+		cache.Set(key, RateLimitCounter.Start(window), window);
 		return false;
 	}
 
-	private int ResolveMaxRequests(string appId)
+	private static int ResolveMaxRequests(string appId, RateLimitOptions options)
 	{
 		if (!string.IsNullOrEmpty(appId)
-		    && _options.AppLimits is not null
-		    && _options.AppLimits.TryGetValue(appId, out var appMax))
+		    && options.AppLimits is not null
+		    && options.AppLimits.TryGetValue(appId, out var appMax))
 		{
 			return appMax;
 		}
 
-		return _options.MaxRequests;
+		return options.MaxRequests;
 	}
 
-	private IPAddress ResolveClientIp(HttpContext http, IPAddress? peer)
+	private static HashSet<IPAddress> ParseTrustedProxies(IEnumerable<string>? proxies, ILogger logger)
+	{
+		var trusted = new HashSet<IPAddress>();
+		foreach (var raw in proxies ?? [])
+		{
+			if (IPAddress.TryParse(raw, out var parsed))
+			{
+				trusted.Add(Normalize(parsed));
+			}
+			else
+			{
+				logger.LogWarning("Ignoring RateLimit trusted proxy value {Proxy} because it is not an IP address", raw);
+			}
+		}
+
+		return trusted;
+	}
+
+	private static IPAddress ResolveClientIp(HttpContext http, IPAddress? peer, HashSet<IPAddress> trustedProxies)
 	{
 		var normalizedPeer = peer is null ? IPAddress.None : Normalize(peer);
-		if (peer is null || !_trustedProxies.Contains(normalizedPeer))
+		if (peer is null || !trustedProxies.Contains(normalizedPeer))
 		{
 			return normalizedPeer;
 		}
