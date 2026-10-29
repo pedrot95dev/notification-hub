@@ -45,6 +45,8 @@ public class ApplicationConfiguration : IEntityTypeConfiguration<Application>
 		builder.HasKey(x => x.Id);
 		builder.Property(x => x.ExternalId)
 			.IsRequired();
+		builder.HasIndex(x => x.ExternalId)
+			.IsUnique();
 		builder.Property(x => x.Domain)
 			.IsRequired();
 		builder.Property(x => x.EmailDestination)
