@@ -29,7 +29,7 @@ public class SendEmailEndpointSummary : EndpointSummary
 }
 
 public class SendEmailEndpoint : Endpoint<SendEmailRequest,
-										  Results<Ok, ProblemDetails>>
+										  Results<NoContent, ProblemDetails>>
 {
 	private readonly ICurrentApplication _currentApplication;
 	private readonly IEmailService _emailService;

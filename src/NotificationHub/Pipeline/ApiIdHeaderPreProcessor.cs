@@ -26,6 +26,7 @@ public class ApiIdHeaderPreProcessor : IGlobalPreProcessor
 		{
 			_logger.LogWarning("Unauthorized request from {RemoteIpAddress}: missing {AppHeader}", ipAddress, AppIdHeader);
 			await ctx.HttpContext.Response.SendUnauthorizedAsync(cancellation: ct);
+			return;
 		}
 		
 		_logger.LogInformation("Request from {RemoteIpAddress} with {AppHeader}={AppId}", ipAddress, AppIdHeader, appId);
