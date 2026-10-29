@@ -7,15 +7,15 @@ namespace NotificationHub.Persistence;
 
 public class ApplicationDbContext : DbContext
 {
-	private readonly IConfiguration _configuration;
+	private readonly IConfiguration? _configuration;
 
-	public ApplicationDbContext(IConfiguration configuration)
+	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+	{
+	}
+
+	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IConfiguration configuration) : this(options)
 	{
 		_configuration = configuration;
-	}
-	
-	internal ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-	{
 	}
 
 	public DbSet<Application> Applications { get; set; }
@@ -32,7 +32,7 @@ public class ApplicationDbContext : DbContext
 		}
 		
 		optionsBuilder.UseNpgsql(
-			_configuration.GetConnectionString("ApplicationDbConnection"),
+			_configuration?.GetConnectionString("ApplicationDbConnection"),
 			b => { b.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName); }
 		);
 		

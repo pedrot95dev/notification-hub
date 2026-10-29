@@ -32,6 +32,8 @@ jobs:
         fi
     - name: Build
       run: dotnet build --no-restore
+    - name: Test
+      run: dotnet test --no-build --nologo
 
   build-push-docker:
     if: github.event_name == 'push'

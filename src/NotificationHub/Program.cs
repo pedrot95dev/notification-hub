@@ -48,7 +48,12 @@ if (app.Environment.IsDevelopment())
 	app.UseSwaggerGen();
 }
 
-var dbFeeder = app.Services.GetRequiredService<ApplicationDbFeeder>();
-await dbFeeder.MigrateAsync();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+	var dbFeeder = app.Services.GetRequiredService<ApplicationDbFeeder>();
+	await dbFeeder.MigrateAsync();
+}
 
 app.Run();
+
+public partial class Program;
