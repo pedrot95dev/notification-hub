@@ -48,6 +48,9 @@ namespace NotificationHub.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ExternalId")
+                        .IsUnique();
+
                     b.HasIndex("SmtpConfigurationId");
 
                     b.ToTable("Applications");
