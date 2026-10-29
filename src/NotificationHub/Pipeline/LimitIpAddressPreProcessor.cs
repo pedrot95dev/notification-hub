@@ -44,6 +44,11 @@ public class LimitIpAddressPreProcessor : IGlobalPreProcessor
 			return;
 		}
 
+		if (ctx.HttpContext.Request.Path.Equals("/health", StringComparison.OrdinalIgnoreCase))
+		{
+			return;
+		}
+
 		var http = ctx.HttpContext;
 		var peer = http.Connection.RemoteIpAddress;
 		var clientIp = ResolveClientIp(http, peer);
