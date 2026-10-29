@@ -19,7 +19,7 @@ SMTP passwords are encrypted with ASP.NET Data Protection when `Security__DataPr
 Before the rewrite:
 
 1. Back up the column outside the repo and outside the image: `SELECT "Id", "UserName", "Password" FROM "SmtpConfigurations";`
-2. Create a host directory for the key ring and give it to the container user (`docker run --rm mcr.microsoft.com/dotnet/aspnet:8.0 id app`, often uid 1654).
+2. Create a host directory for the key ring and give it to the container user (`docker run --rm mcr.microsoft.com/dotnet/aspnet:10.0 id app`, often uid 1654).
 3. Mount that directory at `Security__DataProtectionKeyRingPath` and run once with `Security__EncryptExistingPasswords=true`.
 4. Send one message. Then delete the plaintext backup. Keep a copy of the key ring with the database backups. Losing the keys makes every later send fail.
 
