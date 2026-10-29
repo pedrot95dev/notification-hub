@@ -57,7 +57,7 @@ public class SendEmailEndpoint : Endpoint<SendEmailRequest,
 		var applicationResult = _currentApplication.Application;
 		if (applicationResult.IsT1)
 		{
-			await SendUnauthorizedAsync(ct);
+			await Send.UnauthorizedAsync(ct);
 			return;
 		}
 		
@@ -75,13 +75,13 @@ public class SendEmailEndpoint : Endpoint<SendEmailRequest,
 		{
 			await LogEmailSent(application.Id, req.ReplayToEmail, EmailSentStatus.Failed, sent.Error, sentAt: null, ct);
 			AddError("The email could not be sent. Please try again.");
-			await SendErrorsAsync(502, ct);
+			await Send.ErrorsAsync(502, ct);
 			return;
 		}
 		
 		await LogEmailSent(application.Id, req.ReplayToEmail, EmailSentStatus.Sent, error: null, DateTime.UtcNow, ct);
 
-		await SendNoContentAsync(ct);
+		await Send.NoContentAsync(ct);
 	}
 
 	private async Task LogEmailSent(Guid applicationId, string email, EmailSentStatus status, string? error, DateTime? sentAt, CancellationToken ct)
