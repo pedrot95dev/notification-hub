@@ -2,6 +2,7 @@
 using MimeKit;
 using MimeKit.Utils;
 using NotificationHub.Persistence.Entities;
+using NotificationHub.Security;
 using SmtpClient = MailKit.Net.Smtp.SmtpClient;
 
 namespace NotificationHub.Services.EmailService;
@@ -9,11 +10,13 @@ namespace NotificationHub.Services.EmailService;
 public class EmailService : IEmailService
 {
 	private readonly ILogger<EmailService> _logger;
+	private readonly ISmtpPasswordProtector _passwords;
 	private readonly string _localDomain;
 
-	public EmailService(ILogger<EmailService> logger, IOptions<EmailOptions> options)
+	public EmailService(ILogger<EmailService> logger, IOptions<EmailOptions> options, ISmtpPasswordProtector passwords)
 	{
 		_logger = logger;
+		_passwords = passwords;
 		var configured = options.Value.LocalDomain;
 		_localDomain = string.IsNullOrWhiteSpace(configured)
 			? EmailOptions.DefaultLocalDomain
@@ -29,7 +32,8 @@ public class EmailService : IEmailService
 		try
 		{
 			await smtpClient.ConnectAsync(smtpConfiguration.Host, smtpConfiguration.Port, smtpConfiguration.EnableSsl, ct);
-			await smtpClient.AuthenticateAsync(smtpConfiguration.UserName, smtpConfiguration.Password, ct);
+			var password = _passwords.Decrypt(smtpConfiguration.Password);
+			await smtpClient.AuthenticateAsync(smtpConfiguration.UserName, password, ct);
 			
 			var message = new MimeMessage();
 			message.MessageId = MimeUtils.GenerateMessageId(_localDomain);
