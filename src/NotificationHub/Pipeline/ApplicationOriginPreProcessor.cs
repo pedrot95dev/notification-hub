@@ -7,17 +7,6 @@ public class ApplicationOriginPreProcessor : IGlobalPreProcessor
 {
 	public const string OriginHeader = "Origin";
 
-	private readonly ILogger<ApplicationOriginPreProcessor> _logger;
-	private readonly ICurrentApplication _currentApplication;
-
-	public ApplicationOriginPreProcessor(
-		ILogger<ApplicationOriginPreProcessor> logger,
-		ICurrentApplication currentApplication)
-	{
-		_logger = logger;
-		_currentApplication = currentApplication;
-	}
-
 	public async Task PreProcessAsync(IPreProcessorContext ctx, CancellationToken ct)
 	{
 		if (ctx.HttpContext.ResponseStarted())
@@ -36,7 +25,8 @@ public class ApplicationOriginPreProcessor : IGlobalPreProcessor
 			return;
 		}
 
-		var applicationResult = _currentApplication.Application;
+		var currentApplication = ctx.HttpContext.RequestServices.GetRequiredService<ICurrentApplication>();
+		var applicationResult = currentApplication.Application;
 		if (applicationResult.IsT1)
 		{
 			return;
@@ -48,7 +38,9 @@ public class ApplicationOriginPreProcessor : IGlobalPreProcessor
 			return;
 		}
 
-		_logger.LogWarning(
+		ctx.HttpContext.RequestServices
+			.GetRequiredService<ILogger<ApplicationOriginPreProcessor>>()
+			.LogWarning(
 			"Rejected request for app {AppId}: Origin host does not match the application domain",
 			application.ExternalId);
 		await ctx.HttpContext.Response.SendUnauthorizedAsync(cancellation: ct);

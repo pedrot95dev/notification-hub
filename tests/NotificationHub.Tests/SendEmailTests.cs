@@ -87,6 +87,28 @@ public class SendEmailTests
 	}
 
 	[Fact]
+	public async Task Parallel_hosts_reject_an_overlong_subject_without_touching_a_disposed_cache()
+	{
+		var tasks = Enumerable.Range(0, 8).Select(_ => RejectOverlongSubjectAsync());
+		await Task.WhenAll(tasks);
+	}
+
+	private static async Task RejectOverlongSubjectAsync()
+	{
+		await using var factory = new NotificationHubApiFactory();
+		await factory.SeedApplicationAsync("dconstructions");
+
+		var response = await SendAsync(
+			factory,
+			appId: "dconstructions",
+			subject: new string('a', 151),
+			message: "hello");
+
+		Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+		Assert.Equal(0, factory.Email.CallCount);
+	}
+
+	[Fact]
 	public async Task Trusted_peer_limits_each_cf_connecting_ip_separately()
 	{
 		await using var factory = new NotificationHubApiFactory(TightLimit("127.0.0.1"));
