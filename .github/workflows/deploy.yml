@@ -36,19 +36,94 @@ jobs:
       run: dotnet test --no-build --nologo
 
   build-push-docker:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v7
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag pedrodev95/notification-hub:latest
+    - name: Docker metadata
+      id: meta
+      uses: docker/metadata-action@v6
+      with:
+        images: pedrodev95/notification-hub
+        # Disable the automatic latest tag. latest is the explicit raw tag below.
+        flavor: |
+          latest=false
+        tags: |
+          type=raw,value=0.1.${{ github.run_number }},priority=300
+          type=sha,format=short,prefix=sha-
+          type=raw,value=latest
+        labels: |
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.version=0.1.${{ github.run_number }}
+    - name: Check image tags and labels
+      env:
+        DOCKER_TAGS: ${{ steps.meta.outputs.tags }}
+        DOCKER_LABELS: ${{ steps.meta.outputs.labels }}
+        VERSION_TAG: 0.1.${{ github.run_number }}
+      run: |
+        set -euo pipefail
+        image=pedrodev95/notification-hub
+        short_sha=${GITHUB_SHA:0:7}
+        expected=$(printf '%s\n' \
+          "${image}:${VERSION_TAG}" \
+          "${image}:sha-${short_sha}" \
+          "${image}:latest" | sort)
+        actual=$(printf '%s\n' "$DOCKER_TAGS" | sed '/^$/d' | sort)
+        if [ "$expected" != "$actual" ]; then
+          echo "Unexpected Docker tags." >&2
+          echo "Expected:" >&2
+          printf '%s\n' "$expected" >&2
+          echo "Actual:" >&2
+          printf '%s\n' "$actual" >&2
+          exit 1
+        fi
+        require_label() {
+          if ! printf '%s\n' "$DOCKER_LABELS" | grep -Fxq "$1"; then
+            echo "Missing label: $1" >&2
+            printf '%s\n' "$DOCKER_LABELS" >&2
+            exit 1
+          fi
+        }
+        require_label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+        require_label "org.opencontainers.image.revision=${GITHUB_SHA}"
+        require_label "org.opencontainers.image.version=${VERSION_TAG}"
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
     - name: Login on Docker registry
       uses: docker/login-action@v4
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_TOKEN }}
-    - name: Push the Docker image
-      run: docker push pedrodev95/notification-hub:latest
+    - name: Build and push the Docker image
+      id: push
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: Dockerfile
+        push: true
+        # Keep a single image manifest, same as the previous docker push, so the
+        # tag digest is the image itself.
+        provenance: false
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+    - name: Write the version tag and digest to the job summary
+      env:
+        IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+        VERSION_TAG: 0.1.${{ github.run_number }}
+      run: |
+        set -euo pipefail
+        if [ -z "$IMAGE_DIGEST" ]; then
+          echo "Build did not return an image digest." >&2
+          exit 1
+        fi
+        {
+          echo "### Docker image"
+          echo ""
+          echo "- Version tag: \`pedrodev95/notification-hub:${VERSION_TAG}\`"
+          echo "- Digest: \`${IMAGE_DIGEST}\`"
+          echo "- Pin: \`pedrodev95/notification-hub:${VERSION_TAG}@${IMAGE_DIGEST}\`"
+        } >> "$GITHUB_STEP_SUMMARY"

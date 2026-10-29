@@ -35,13 +35,31 @@ When a request sends `Origin`, its host is compared to `Applications.Domain` aft
 SELECT "ExternalId", "Domain" FROM "Applications";
 ```
 
+## Image tags
+
+A push to `main` publishes one `pedrodev95/notification-hub` image under three tags:
+
+- `0.1.<run number>` — `github.run_number` of that Deploy run
+- `sha-<short sha>` — `sha-` plus the first 7 characters of the commit
+- `latest`
+
+The three tags share one digest. Open the run under Actions → Deploy and read the `build-push-docker` summary for the version tag and the `sha256:` digest. Pin a deploy with both:
+
+```bash
+pedrodev95/notification-hub:0.1.<run number>@sha256:<digest>
+```
+
+The image also carries `org.opencontainers.image.source`, `org.opencontainers.image.revision` (full commit), and `org.opencontainers.image.version` (`0.1.<run number>`). Pull requests run the build, the vulnerable-package scan, and tests, and do not push. Those runs use other numbers in the same `github.run_number` sequence, so `0.1.N` on `main` is not consecutive.
+
 ## Docker publish binding
 
 Publish the container on the host loopback interface so only cloudflared (or another local process) can open a connection:
 
 ```bash
-docker run -p 127.0.0.1:7999:7999 --env-file notification-hub.env pedrodev95/notification-hub:latest
+docker run -p 127.0.0.1:7999:7999 --env-file notification-hub.env pedrodev95/notification-hub:0.1.<run number>@sha256:<digest>
 ```
+
+`latest` is that same image. The version tag and digest in the Deploy summary are what a pinned deploy uses.
 
 Do not publish `0.0.0.0:7999`. A LAN-wide bind lets any host on the network set `CF-Connecting-IP` and pick a fresh rate-limit key. Run cloudflared on the same machine, pointed at `http://127.0.0.1:7999`.
 
