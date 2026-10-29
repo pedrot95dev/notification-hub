@@ -23,6 +23,7 @@ public class SendEmailEndpointSummary : EndpointSummary
 		Response(204, "Ok response with the content.");
 		Response<ErrorResponse>(400, "Validation request");
 		Response<ErrorResponse>(401, "Unauthorized request");
+		Response<ErrorResponse>(429, "Too many requests");
 		Response<ErrorResponse>(502, "Email could not be sent");
 	}
 }

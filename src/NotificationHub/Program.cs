@@ -13,6 +13,8 @@ builder.Services
 	.AddCors()
 	.AddMemoryCache();
 
+builder.Services.Configure<RateLimitOptions>(builder.Configuration.GetSection(RateLimitOptions.SectionName));
+
 builder.Services.AddScoped<ICurrentApplication, CurrentApplication>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
