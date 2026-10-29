@@ -17,6 +17,8 @@ public class SendEmailRequestValidator : Validator<SendEmailRequest>
 			
 		RuleFor(x => x.ReplayToEmail)
 			.NotEmpty()
+			.Must(email => email is null || (email.IndexOf('\r') < 0 && email.IndexOf('\n') < 0))
+				.WithMessage("'{PropertyName}' must not contain line breaks.")
 			.EmailAddress();
 	}
 }
