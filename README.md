@@ -29,3 +29,7 @@ RateLimit__AppLimits__<portfolio-external-id>=30
 ```
 
 Unlisted applications use `MaxRequests`. Requests with no app id still count against the client IP.
+
+## HELO and Message-Id
+
+`Email__LocalDomain` (default `notification-hub.pedroteixeira.dev`) is the SMTP EHLO/HELO name and the domain on the right-hand side of `Message-Id`. It does not change the public IP the receiving server records on `Received`.

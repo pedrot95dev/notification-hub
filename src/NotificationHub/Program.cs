@@ -14,6 +14,7 @@ builder.Services
 	.AddMemoryCache();
 
 builder.Services.Configure<RateLimitOptions>(builder.Configuration.GetSection(RateLimitOptions.SectionName));
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 
 builder.Services.AddScoped<ICurrentApplication, CurrentApplication>();
 builder.Services.AddScoped<IEmailService, EmailService>();
