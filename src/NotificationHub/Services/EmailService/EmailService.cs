@@ -2,6 +2,7 @@
 using MimeKit;
 using MimeKit.Utils;
 using NotificationHub.Persistence.Entities;
+using NotificationHub.Observability;
 using NotificationHub.Security;
 using SmtpClient = MailKit.Net.Smtp.SmtpClient;
 
@@ -11,12 +12,18 @@ public class EmailService : IEmailService
 {
 	private readonly ILogger<EmailService> _logger;
 	private readonly ISmtpPasswordProtector _passwords;
+	private readonly ISmtpFailureReporter _failures;
 	private readonly string _localDomain;
 
-	public EmailService(ILogger<EmailService> logger, IOptions<EmailOptions> options, ISmtpPasswordProtector passwords)
+	public EmailService(
+		ILogger<EmailService> logger,
+		IOptions<EmailOptions> options,
+		ISmtpPasswordProtector passwords,
+		ISmtpFailureReporter failures)
 	{
 		_logger = logger;
 		_passwords = passwords;
+		_failures = failures;
 		var configured = options.Value.LocalDomain;
 		_localDomain = string.IsNullOrWhiteSpace(configured)
 			? EmailOptions.DefaultLocalDomain
@@ -57,6 +64,7 @@ public class EmailService : IEmailService
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error sending email");
+			_failures.Capture(ex, smtpConfiguration.Host);
 			return EmailSendResult.Fail(TrimError(ex.Message));
 		}
 		finally

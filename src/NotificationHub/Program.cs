@@ -1,6 +1,9 @@
+using System.Reflection;
 using Microsoft.AspNetCore.DataProtection;
 using FastEndpoints;
+using Sentry.Extensibility;
 using FastEndpoints.Swagger;
+using NotificationHub.Observability;
 using NotificationHub.Persistence;
 using NotificationHub.Pipeline;
 using NotificationHub.Security;
@@ -26,6 +29,37 @@ if (!string.IsNullOrWhiteSpace(keyRingPath))
 	dataProtection.PersistKeysToFileSystem(Directory.CreateDirectory(keyRingPath));
 }
 
+var sentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
+if (!string.IsNullOrWhiteSpace(sentryDsn))
+{
+	builder.WebHost.UseSentry(options =>
+	{
+		options.Dsn = sentryDsn;
+		options.SendDefaultPii = false;
+		options.MaxRequestBodySize = RequestSize.None;
+		options.MinimumEventLevel = LogLevel.None;
+		options.MinimumBreadcrumbLevel = LogLevel.None;
+		options.Release = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
+		options.Environment = Environment.GetEnvironmentVariable("SENTRY_ENVIRONMENT")
+			?? builder.Environment.EnvironmentName;
+		options.SetBeforeSend((sentryEvent, _) =>
+		{
+			if (sentryEvent.Request is not null)
+			{
+				sentryEvent.Request.Data = null;
+				sentryEvent.Request.Cookies = null;
+			}
+
+			return sentryEvent;
+		});
+	});
+	builder.Services.AddSingleton<ISmtpFailureReporter, SentrySmtpFailureReporter>();
+}
+else
+{
+	builder.Services.AddSingleton<ISmtpFailureReporter, NullSmtpFailureReporter>();
+}
+
 builder.Services.AddSingleton<ISmtpPasswordProtector, SmtpPasswordProtector>();
 builder.Services.AddScoped<SmtpPasswordEncryptor>();
 
@@ -44,6 +78,25 @@ app.UseCors(policy =>
 		.WithOrigins(CorsOrigins(app.Configuration))
 		.AllowAnyHeader()
 		.AllowAnyMethod();
+});
+
+app.MapGet("/health", async (ApplicationDbContext db, ILoggerFactory loggerFactory, CancellationToken ct) =>
+{
+	var healthy = false;
+	try
+	{
+		healthy = await db.Database.CanConnectAsync(ct);
+	}
+	catch (Exception ex)
+	{
+		loggerFactory.CreateLogger("Health").LogError(
+			"Database health check failed ({ExceptionType})",
+			ex.GetType().Name);
+	}
+
+	return healthy
+		? Results.Ok(new { status = "healthy" })
+		: Results.Json(new { status = "unhealthy" }, statusCode: StatusCodes.Status503ServiceUnavailable);
 });
 
 app.UseFastEndpoints(c =>
