@@ -9,11 +9,11 @@ public class SendEmailRequestValidator : Validator<SendEmailRequest>
 	{
 		RuleFor(x => x.Subject)
 			.NotEmpty()
-			.MaximumLength(60);
+			.MaximumLength(150);
 			
 		RuleFor(x => x.Message)
 			.NotEmpty()
-			.MaximumLength(500);
+			.MaximumLength(2000);
 			
 		RuleFor(x => x.ReplayToEmail)
 			.NotEmpty()
