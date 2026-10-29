@@ -185,6 +185,9 @@ orleans.codegen.cs
 
 /node_modules
 
+# Local design-time connection string. Copy local.config.example.json.
+src/NotificationHub.Persistence/local.config.json
+
 # RIA/Silverlight projects
 Generated_Code/
 

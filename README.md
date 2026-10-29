@@ -2,6 +2,16 @@
 
 Simple notification hub for public pages.
 
+## Configuration
+
+The app reads the Postgres connection string from `ConnectionStrings:ApplicationDbConnection` (`IConfiguration.GetConnectionString("ApplicationDbConnection")` in `ApplicationDbContext`). In Docker that value has to come from the environment, because it is not in `appsettings.json`:
+
+```bash
+ConnectionStrings__ApplicationDbConnection=Server=host;Port=5432;Database=notification-hub;Username=...;Password=...
+```
+
+Design-time `dotnet ef` reads `src/NotificationHub.Persistence/local.config.json`, which is gitignored. Copy `local.config.example.json` to that path and put in a local password before adding a migration. The container runs as the image's `app` user and listens on an unprivileged port (publish `127.0.0.1:7999`).
+
 ## Docker publish binding
 
 Publish the container on the host loopback interface so only cloudflared (or another local process) can open a connection:

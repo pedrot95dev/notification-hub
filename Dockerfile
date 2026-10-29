@@ -13,4 +13,5 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
 WORKDIR /App
 COPY --from=build /App/out .
+USER app
 ENTRYPOINT ["dotnet", "NotificationHub.dll"]
