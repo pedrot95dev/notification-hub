@@ -1,4 +1,6 @@
-﻿using MimeKit;
+﻿using Microsoft.Extensions.Options;
+using MimeKit;
+using MimeKit.Utils;
 using NotificationHub.Persistence.Entities;
 using SmtpClient = MailKit.Net.Smtp.SmtpClient;
 
@@ -7,10 +9,15 @@ namespace NotificationHub.Services.EmailService;
 public class EmailService : IEmailService
 {
 	private readonly ILogger<EmailService> _logger;
+	private readonly string _localDomain;
 
-	public EmailService(ILogger<EmailService> logger)
+	public EmailService(ILogger<EmailService> logger, IOptions<EmailOptions> options)
 	{
 		_logger = logger;
+		var configured = options.Value.LocalDomain;
+		_localDomain = string.IsNullOrWhiteSpace(configured)
+			? EmailOptions.DefaultLocalDomain
+			: configured.Trim();
 	}
 	
 	public async Task<bool> SendEmailAsync(string subject, string body, string fromAddress, string toAddress, string? replyToAddress, SmtpConfiguration smtpConfiguration, CancellationToken ct = default)
@@ -18,12 +25,14 @@ public class EmailService : IEmailService
 		_logger.LogInformation("Sending email...");
 		
 		using var smtpClient = new SmtpClient();
+		smtpClient.LocalDomain = _localDomain;
 		try
 		{
 			await smtpClient.ConnectAsync(smtpConfiguration.Host, smtpConfiguration.Port, smtpConfiguration.EnableSsl, ct);
 			await smtpClient.AuthenticateAsync(smtpConfiguration.UserName, smtpConfiguration.Password, ct);
 			
 			var message = new MimeMessage();
+			message.MessageId = MimeUtils.GenerateMessageId(_localDomain);
 			message.Subject = subject;
 
 			// For plain text body
