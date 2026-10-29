@@ -20,7 +20,7 @@ public class EmailService : IEmailService
 			: configured.Trim();
 	}
 	
-	public async Task<bool> SendEmailAsync(string subject, string body, string fromAddress, string toAddress, string? replyToAddress, SmtpConfiguration smtpConfiguration, CancellationToken ct = default)
+	public async Task<EmailSendResult> SendEmailAsync(string subject, string body, string fromAddress, string toAddress, string? replyToAddress, SmtpConfiguration smtpConfiguration, CancellationToken ct = default)
 	{
 		_logger.LogInformation("Sending email...");
 		
@@ -53,7 +53,7 @@ public class EmailService : IEmailService
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error sending email");
-			return false;
+			return EmailSendResult.Fail(TrimError(ex.Message));
 		}
 		finally
 		{
@@ -61,7 +61,17 @@ public class EmailService : IEmailService
 		}
 		
 		_logger.LogInformation("Email sent successfully");
-		return true;
-	
+		return EmailSendResult.Ok();
+	}
+
+	private static string TrimError(string message)
+	{
+		const int maxLength = 2000;
+		if (message.Length <= maxLength)
+		{
+			return message;
+		}
+
+		return message[..maxLength];
 	}
 }
