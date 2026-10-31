@@ -37,17 +37,22 @@ SELECT "ExternalId", "Domain" FROM "Applications";
 
 ## Image tags
 
-A push to `main` publishes one `pedrodev95/notification-hub` image under three tags:
+A push to `main` publishes one build to Docker Hub and GitHub Container Registry. Both names get the same three tags:
 
 - `0.1.<run number>` — `github.run_number` of that Deploy run
 - `sha-<short sha>` — `sha-` plus the first 7 characters of the commit
 - `latest`
 
-The three tags share one digest. Open the run under Actions → Deploy and read the `build-push-docker` summary for the version tag and the `sha256:` digest. Pin a deploy with both:
+The names are `pedrodev95/notification-hub` and `ghcr.io/pedrot95dev/notification-hub` (private).
+
+On each registry the three tags share that registry's digest. Open the run under Actions → Deploy and read the `build-push-docker` summary for both version tags and both `sha256:` digests. Pin a deploy with the tag and the digest from that registry:
 
 ```bash
 pedrodev95/notification-hub:0.1.<run number>@sha256:<digest>
+ghcr.io/pedrot95dev/notification-hub:0.1.<run number>@sha256:<digest>
 ```
+
+The first push creates the GHCR package and leaves it private. Pulling that name needs a token with `read:packages`.
 
 The image also carries `org.opencontainers.image.source`, `org.opencontainers.image.revision` (full commit), and `org.opencontainers.image.version` (`0.1.<run number>`). Pull requests run the build, the vulnerable-package scan, and tests, and do not push. Those runs use other numbers in the same `github.run_number` sequence, so `0.1.N` on `main` is not consecutive.
 
@@ -59,7 +64,7 @@ Publish the container on the host loopback interface so only cloudflared (or ano
 docker run -p 127.0.0.1:7999:7999 --env-file notification-hub.env pedrodev95/notification-hub:0.1.<run number>@sha256:<digest>
 ```
 
-`latest` is that same image. The version tag and digest in the Deploy summary are what a pinned deploy uses.
+`latest` is that same image on that registry. The version tags and digests in the Deploy summary are what a pinned deploy uses.
 
 Do not publish `0.0.0.0:7999`. A LAN-wide bind lets any host on the network set `CF-Connecting-IP` and pick a fresh rate-limit key. Run cloudflared on the same machine, pointed at `http://127.0.0.1:7999`.
 
