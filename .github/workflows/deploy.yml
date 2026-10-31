@@ -40,6 +40,9 @@ jobs:
     needs: build
 
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - uses: actions/checkout@v7
@@ -47,7 +50,10 @@ jobs:
       id: meta
       uses: docker/metadata-action@v6
       with:
-        images: pedrodev95/notification-hub
+        # Same build, both registries. Docker Hub keeps its existing name.
+        images: |
+          pedrodev95/notification-hub
+          ghcr.io/pedrot95dev/notification-hub
         # Disable the automatic latest tag. latest is the explicit raw tag below.
         flavor: |
           latest=false
@@ -66,12 +72,16 @@ jobs:
         VERSION_TAG: 0.1.${{ github.run_number }}
       run: |
         set -euo pipefail
-        image=pedrodev95/notification-hub
+        hub_image=pedrodev95/notification-hub
+        ghcr_image=ghcr.io/pedrot95dev/notification-hub
         short_sha=${GITHUB_SHA:0:7}
         expected=$(printf '%s\n' \
-          "${image}:${VERSION_TAG}" \
-          "${image}:sha-${short_sha}" \
-          "${image}:latest" | sort)
+          "${hub_image}:${VERSION_TAG}" \
+          "${hub_image}:sha-${short_sha}" \
+          "${hub_image}:latest" \
+          "${ghcr_image}:${VERSION_TAG}" \
+          "${ghcr_image}:sha-${short_sha}" \
+          "${ghcr_image}:latest" | sort)
         actual=$(printf '%s\n' "$DOCKER_TAGS" | sed '/^$/d' | sort)
         if [ "$expected" != "$actual" ]; then
           echo "Unexpected Docker tags." >&2
@@ -98,6 +108,12 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_TOKEN }}
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build and push the Docker image
       id: push
       uses: docker/build-push-action@v6
@@ -110,7 +126,7 @@ jobs:
         provenance: false
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-    - name: Write the version tag and digest to the job summary
+    - name: Write the version tags and digests to the job summary
       env:
         IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
         VERSION_TAG: 0.1.${{ github.run_number }}
@@ -120,10 +136,51 @@ jobs:
           echo "Build did not return an image digest." >&2
           exit 1
         fi
+        # Read the tag digest each registry stored. One build is pushed to both;
+        # these two values are what a compare or a pin uses.
+        registry_digest() {
+          local ref="$1"
+          local raw digest
+          if ! raw=$(docker buildx imagetools inspect --format '{{json .Manifest.Digest}}' "$ref"); then
+            echo "Could not inspect ${ref}." >&2
+            return 1
+          fi
+          digest=${raw#\"}
+          digest=${digest%\"}
+          digest=${digest//$'\n'/}
+          if ! printf '%s' "$digest" | grep -Eq '^sha256:[a-f0-9]{64}$'; then
+            digest=$(printf '%s\n' "$raw" | awk '/^Digest:/ { print $2; exit }')
+          fi
+          if ! printf '%s' "$digest" | grep -Eq '^sha256:[a-f0-9]{64}$'; then
+            echo "No digest for ${ref}." >&2
+            printf '%s\n' "$raw" >&2
+            return 1
+          fi
+          printf '%s\n' "$digest"
+        }
+        hub_image=pedrodev95/notification-hub
+        ghcr_image=ghcr.io/pedrot95dev/notification-hub
+        hub_digest=$(registry_digest "${hub_image}:${VERSION_TAG}") || exit 1
+        ghcr_digest=$(registry_digest "${ghcr_image}:${VERSION_TAG}") || exit 1
+        if [ "$hub_digest" = "$ghcr_digest" ]; then
+          digest_compare="Digests match."
+        else
+          digest_compare="Digests differ."
+        fi
         {
           echo "### Docker image"
           echo ""
-          echo "- Version tag: \`pedrodev95/notification-hub:${VERSION_TAG}\`"
-          echo "- Digest: \`${IMAGE_DIGEST}\`"
-          echo "- Pin: \`pedrodev95/notification-hub:${VERSION_TAG}@${IMAGE_DIGEST}\`"
+          echo "#### Docker Hub"
+          echo ""
+          echo "- Version tag: \`${hub_image}:${VERSION_TAG}\`"
+          echo "- Digest: \`${hub_digest}\`"
+          echo "- Pin: \`${hub_image}:${VERSION_TAG}@${hub_digest}\`"
+          echo ""
+          echo "#### GitHub Container Registry"
+          echo ""
+          echo "- Version tag: \`${ghcr_image}:${VERSION_TAG}\`"
+          echo "- Digest: \`${ghcr_digest}\`"
+          echo "- Pin: \`${ghcr_image}:${VERSION_TAG}@${ghcr_digest}\`"
+          echo ""
+          echo "$digest_compare"
         } >> "$GITHUB_STEP_SUMMARY"
